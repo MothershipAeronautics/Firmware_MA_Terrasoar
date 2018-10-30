@@ -367,7 +367,7 @@ RCUpdate::rc_poll(const ParameterHandles &parameter_handles)
 			manual.timestamp = rc_input.timestamp_last_signal;
 			manual.data_source = manual_control_setpoint_s::SOURCE_RC;
 
-			/* limit controls */
+			/* limit controls *
 			manual.y = get_rc_value(rc_channels_s::RC_CHANNELS_FUNCTION_ROLL, -1.0, 1.0);
 			manual.x = get_rc_value(rc_channels_s::RC_CHANNELS_FUNCTION_PITCH, -1.0, 1.0);
 			manual.r = get_rc_value(rc_channels_s::RC_CHANNELS_FUNCTION_YAW, -1.0, 1.0);
@@ -384,6 +384,7 @@ RCUpdate::rc_poll(const ParameterHandles &parameter_handles)
 			manual.x = math::constrain(_filter_pitch.apply(manual.x), -1.f, 1.f);
 			manual.r = math::constrain(_filter_yaw.apply(manual.r), -1.f, 1.f);
 			manual.z = math::constrain(_filter_throttle.apply(manual.z), 0.f, 1.f);
+
 
 			if (_parameters.rc_map_flightmode > 0) {
 
@@ -450,7 +451,7 @@ RCUpdate::rc_poll(const ParameterHandles &parameter_handles)
 
 			actuator_group_3.timestamp = rc_input.timestamp_last_signal;
 
-			actuator_group_3.control[0] = manual.y;
+			actuator_group_3.control[0] = 0;
 			actuator_group_3.control[1] = manual.x;
 			actuator_group_3.control[2] = manual.r;
 			actuator_group_3.control[3] = manual.z;
