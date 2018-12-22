@@ -64,8 +64,8 @@ void PositionControl::updateSetpoint(const vehicle_local_position_setpoint_s &se
 	_vel_sp = Vector3f(setpoint.vx, setpoint.vy, setpoint.vz);
 	_acc_sp = Vector3f(setpoint.acc_x, setpoint.acc_y, setpoint.acc_z);
 	_thr_sp = Vector3f(setpoint.thrust);
-	_yaw_sp = _yaw;
-	_yawspeed_sp = NAN;
+	_yaw_sp = setpoint.yaw;
+	_yawspeed_sp = setpoint.yawspeed;
 	_interfaceMapping();
 
 	if (PX4_ISFINITE(setpoint.thrust[0]) && PX4_ISFINITE(setpoint.thrust[1]) && PX4_ISFINITE(setpoint.thrust[2])) {
@@ -278,21 +278,12 @@ void PositionControl::_velocityController(const float &dt)
 	// Saturate thrust setpoint in D-direction.
 	_thr_sp(2) = math::constrain(thrust_desired_D, uMin, uMax);
 
-	float thr_x_max = fabsf(_thr_sp(2)) * tanf(math::radians(85.0f));
-	float thr_x_min = fabsf(_thr_sp(2)) * tanf(math::radians(5.0f));
-	float thr_y_max = fabsf(_thr_sp(2)) * tanf(math::radians(45.0f));
-
 	if (fabsf(_thr_sp(0)) + fabsf(_thr_sp(1))  > FLT_EPSILON) {
 		// Thrust set-point in NE-direction is already provided. Only
 		// scaling by the maximum tilt is required.
-		
-		if (_thr_sp(0) > 0.0f) {
-			_thr_sp(0) *= thr_x_max;
-		} else {
-			_thr_sp(0) *= thr_x_min;
-		}
-
-		_thr_sp(1) *= thr_y_max;
+		float thr_xy_max = fabsf(_thr_sp(2)) * tanf(_constraints.tilt);
+		_thr_sp(0) *= thr_xy_max;
+		_thr_sp(1) *= thr_xy_max;
 
 	} else {
 		// PID-velocity controller for NE-direction.
@@ -301,20 +292,13 @@ void PositionControl::_velocityController(const float &dt)
 		thrust_desired_NE(1) = MPC_XY_VEL_P.get() * vel_err(1) + MPC_XY_VEL_D.get() * _vel_dot(1) + _thr_int(1);
 
 		// Get maximum allowed thrust in NE based on tilt and excess thrust.
-//		float thrust_max_NE_tilt = fabsf(_thr_sp(2)) * tanf(_constraints.tilt);
+		float thrust_max_NE_tilt = fabsf(_thr_sp(2)) * tanf(_constraints.tilt);
 		float thrust_max_NE = sqrtf(MPC_THR_MAX.get() * MPC_THR_MAX.get() - _thr_sp(2) * _thr_sp(2));
-//		thrust_max_NE = math::min(thrust_max_NE_tilt, thrust_max_NE);
+		thrust_max_NE = math::min(thrust_max_NE_tilt, thrust_max_NE);
 
 		// Saturate thrust in NE-direction.
-//		_thr_sp(0) = thrust_desired_NE(0);
-//		_thr_sp(1) = thrust_desired_NE(1);
-
-		if (thrust_desired_NE(0) > 0.0f) {
-			_thr_sp(0) = math::min(thr_x_max, thrust_desired_NE(0));
-		} else {
-			_thr_sp(0) = math::min(thr_x_min, thrust_desired_NE(0));
-		}
-		_thr_sp(1) = math:: min(thr_y_max,thrust_desired_NE(1));
+		_thr_sp(0) = thrust_desired_NE(0);
+		_thr_sp(1) = thrust_desired_NE(1);
 
 		if (thrust_desired_NE * thrust_desired_NE > thrust_max_NE * thrust_max_NE) {
 			float mag = thrust_desired_NE.length();
