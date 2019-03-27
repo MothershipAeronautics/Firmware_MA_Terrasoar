@@ -79,6 +79,9 @@ void PositionControl::generateThrustYawSetpoint(const float dt)
 		// Already received a valid thrust set-point.
 		// Limit the thrust vector.
 		float thr_mag = _thr_sp.length();
+		float thr_x_max = fabsf(_thr_sp(2)) * tanf(math::radians(85.0f));
+		float thr_x_min = fabsf(_thr_sp(2)) * tanf(math::radians(5.0f));
+		float thr_y_max = fabsf(_thr_sp(2)) * tanf(math::radians(45.0f));
 
 		if (thr_mag > MPC_THR_MAX.get()) {
 			_thr_sp = _thr_sp.normalized() * MPC_THR_MAX.get();
@@ -86,6 +89,14 @@ void PositionControl::generateThrustYawSetpoint(const float dt)
 		} else if (thr_mag < MPC_MANTHR_MIN.get() && thr_mag > FLT_EPSILON) {
 			_thr_sp = _thr_sp.normalized() * MPC_MANTHR_MIN.get();
 		}
+
+		if(_thr_sp(0) > 0)  {
+			_thr_sp *=  thr_x_max;
+		} else if (_thr_sp < 0 ) {
+			_thr_sp(0) *= thr_x_min;
+		}
+
+		_thr_sp(1) *= thr_y_min;
 
 		// Just set the set-points equal to the current vehicle state.
 		_pos_sp = _pos;
